@@ -32,4 +32,3 @@ app.include_router(user.router, prefix="/api")
 app.include_router(stock_data.router,prefix="/api")
 
 
-    

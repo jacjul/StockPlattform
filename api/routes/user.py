@@ -59,14 +59,19 @@ def login_user(response:Response, user: OAuth2PasswordRequestForm = Depends(), d
 
 oauth2scheme = OAuth2PasswordBearer(tokenUrl="/user/login")
 
-@router.post("/me")
 def get_current_user(token:str = Depends(oauth2scheme), db:Session =Depends(get_db)):
     
     payload = decode_token(token)
-    current_user = db.query(User).filter(User.id == payload.get("sub"))
+    current_user = db.query(User).filter(User.id == payload.get("sub")).first()
 
+    if not current_user:
+        raise HTTPException(status_code=401, detail ="No User found with that credentials")
     return current_user
 
+@router.post("/me")
+def read_current_user(user:str = Depends(get_current_user)):
+    return user
+    
 @router.post("/refresh")
 def refresh_access_token(response:Response,refresh_token:str|None = Cookie(None), db:Session = Depends(get_db))-> AccessToken:
     if not refresh_token:

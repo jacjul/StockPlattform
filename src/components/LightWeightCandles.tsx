@@ -20,7 +20,12 @@ export default function LightWeightCandles({ candles }: Props) {
             layout: { background: { color: "#ffffff" }, textColor: "#222" },
             grid: { vertLines: { color: "#eee" }, horzLines: { color: "#eee" } },
             rightPriceScale: { borderColor: "#ccc" },
-            timeScale: { borderColor: "#ccc" },
+            timeScale: { borderColor: "#ccc",
+                         timeVisible: false,
+                         secondsVisible: false,
+             },
+            
+
         })
     
     
@@ -46,6 +51,7 @@ export default function LightWeightCandles({ candles }: Props) {
     }, [candles])
 
 return (
-    <div ref={containerRef} style={{width:"100%", maxWidth:900}} />
+    
+    <div ref={containerRef} style={{width:"100%", maxWidth:600}} />
 )
 }
