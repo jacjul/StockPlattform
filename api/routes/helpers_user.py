@@ -5,7 +5,7 @@ import os
 import jwt
 from api.schemas.user import AccessToken
 from fastapi import HTTPException
-from jose import JWTError
+from jwt.exceptions import InvalidTokenError,ExpiredSignatureError,InvalidSignatureError,InvalidAlgorithmError,DecodeError,InvalidIssuedAtError
 
 load_dotenv()
 
@@ -13,7 +13,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES",30))
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES",60*24*15))
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ### Helpers for register
 password_hash = PasswordHash.recommended() # is downloaded with argon2 
 
@@ -61,9 +61,27 @@ def create_refresh_token(data:dict , expiry_delta:int|None =None):
 def decode_token(token:str):
     credentials_exception = HTTPException(status_code = 401, detail="Could not validate credentials")
     try:
-        payload = jwt.decode(token, key=SECRET_KEY ,algorithm= ALGORITHM)
+        payload = jwt.decode(token, key=SECRET_KEY ,algorithms= [ALGORITHM])
+
         if payload.get("sub") is None: 
             raise credentials_exception
         return payload
-    except JWTError:
-        raise credentials_exception
+    
+    except ExpiredSignatureError as e:
+        print("JWT debug: token expired", e)
+        raise HTTPException(status_code=401, detail="Token expired")
+    except InvalidSignatureError as e:
+        print("JWT debug: bad signature (wrong SECRET_KEY?)", e)
+        raise HTTPException(status_code=401, detail="Invalid signature")
+    except InvalidAlgorithmError as e:
+        print("JWT debug: algorithm mismatch", e)
+        raise HTTPException(status_code=401, detail="Invalid algorithm")
+    except InvalidIssuedAtError as e:
+        print("JWT debug: invalid iat claim", e)
+        raise HTTPException(status_code=401, detail="Invalid iat")
+    except DecodeError as e:
+        print("JWT debug: malformed token", e)
+        raise HTTPException(status_code=401, detail="Malformed token")
+    except InvalidTokenError as e:
+        print("JWT debug: generic invalid token", e)
+        raise HTTPException(status_code=401, detail="Invalid token")

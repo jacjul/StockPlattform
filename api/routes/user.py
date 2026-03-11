@@ -7,7 +7,7 @@ from api.models.user import User
 import re 
 from api.routes.helpers_user import hash_password, is_valid, create_access_token,decode_token,create_refresh_token
 from api.schemas.user import AccessToken
-
+from datetime import datetime
 
 router = APIRouter(prefix="/user")
 
@@ -45,9 +45,9 @@ def login_user(response:Response, user: OAuth2PasswordRequestForm = Depends(), d
     if not is_valid(user.password, current_user.hashed_password):
         raise HTTPException(status_code =400, detail = "Password doesn't match the saved password")
 
-    data_access_token = {"sub": current_user.id , "scope":current_user.role, "iat":current_user.created_at}
+    data_access_token = {"sub": str(current_user.id) , "scope":current_user.role.value, "iat":int(datetime.now().timestamp())}
     access_token = create_access_token(data_access_token)
-    refresh_token = create_refresh_token({"sub":current_user.id})
+    refresh_token = create_refresh_token({"sub":str(current_user.id)})
 
     current_user.hashed_refresh_token = hash_password(refresh_token)
     db.add(current_user)
@@ -60,16 +60,17 @@ def login_user(response:Response, user: OAuth2PasswordRequestForm = Depends(), d
 oauth2scheme = OAuth2PasswordBearer(tokenUrl="/user/login")
 
 def get_current_user(token:str = Depends(oauth2scheme), db:Session =Depends(get_db)):
-    
+    print(token)
     payload = decode_token(token)
-    current_user = db.query(User).filter(User.id == payload.get("sub")).first()
+    user_id = int(payload.get("sub"))
+    current_user = db.query(User).filter(User.id == user_id).first()
 
     if not current_user:
         raise HTTPException(status_code=401, detail ="No User found with that credentials")
     return current_user
 
-@router.post("/me")
-def read_current_user(user:str = Depends(get_current_user)):
+@router.get("/me")
+def read_current_user(user:User = Depends(get_current_user)):
     return user
     
 @router.post("/refresh")
@@ -82,21 +83,22 @@ def refresh_access_token(response:Response,refresh_token:str|None = Cookie(None)
     except Exception:
         raise HTTPException(status_code=401, detail = "Refresh is expired or invalid")
     
-    current_user = db.query(User).filter(payload.get("sub")==User.id).first()
+    user_id = int(payload.get("sub"))
+    current_user = db.query(User).filter(User.id ==user_id).first()
 
     if not current_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    data_access_token = {"sub": current_user.id , "scope":current_user.role, "iat":current_user.created_at}
+    data_access_token = {"sub": str(current_user.id) , "scope":current_user.role.value, "iat":int(datetime.now().timestamp())}
     access_token= create_access_token(data_access_token)
-    refresh_token= create_refresh_token({"sub":current_user.id})
+    refresh_token= create_refresh_token({"sub":str(current_user.id)})
     #updating backend
     current_user.hashed_refresh_token = hash_password(refresh_token)
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
     #frontend -> secure=True maybe patch for dev since it can hinder dev 
-    response.set_cookie(key="refresh_cookie", value=refresh_token, httponly=True, secure=True)
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True)
 
 
     return AccessToken(access_token= access_token, token_type="Bearer")

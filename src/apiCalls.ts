@@ -1,8 +1,11 @@
-export  async function getAPI(url="/api"){
+export  async function getAPI(url="/api" ,accessToken?:string|null){
     try{ 
     const response = await fetch(url , {
         method : "GET" ,
-        headers : {"Content-type" : "application/json"},
+        headers : {"Content-type" : "application/json",
+            ...(accessToken? {Authorization :`Bearer ${accessToken}`}:{}),
+        },
+        credentials: "include",
         mode: "cors" 
     })
 

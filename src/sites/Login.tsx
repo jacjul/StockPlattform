@@ -1,29 +1,28 @@
 import {useState} from "react"
-import {Link} from "react-router-dom"
+import {Link,useNavigate} from "react-router-dom"
 import {useMutation} from "@tanstack/react-query"
 import {postAPI} from "../apiCalls"
+import {useAuth} from "../components/context/AuthContext"
+
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false)
+    const {login} = useAuth()
+    const navigate = useNavigate()
 
-    const login = useMutation({
-        mutationFn: async(login_info)=>{
-            console.log(login_info)
-
-            const response = await postAPI("/api/user/login", login_info)
-            return response.message
-        },
-        onSuccess: (data)=>{
-            data
-
-
-
+    const loginMutation = useMutation({
+        mutationFn : async(payload:{username:string, password:string})=>
+            {await login(payload)},
+        onSuccess : ()=>{
+            navigate("/profile")
         }
     })
+
     const handleSubmit = async(event:React.SubmitEvent<HTMLFormElement>)=>{
         event.preventDefault()
         const fd = new FormData(event.currentTarget)
-        console.log(fd)
-        login.mutate(fd)
+        const username = String(fd.get("username")?? "")
+        const password = String(fd.get("password")?? "")
+        loginMutation.mutate({username,password})
 
     }
   return (

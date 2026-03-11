@@ -1,5 +1,5 @@
 import Header from "./components/Header"
-import {Routes, Route} from "react-router-dom"
+import {Routes, Route,Navigate} from "react-router-dom"
 import Profile from "./sites/Profile.tsx"
 import Login from "./sites/Login.tsx"
 import Home from "./sites/Home.tsx"
@@ -7,11 +7,11 @@ import Register from "./sites/Register.tsx"
 import { useEffect, useState } from 'react'
 import { ThemeContext } from "./components/context/theme-context"
 import type { Theme } from "./components/context/theme-context"
-
+import {useAuth} from "./components/context/AuthContext.tsx"
 import './App.css'
 
 function App() {
- 
+  const {loggedIn} = useAuth()
   const [theme, setTheme] = useState<Theme>("dark")
 
   useEffect(() => {
@@ -26,7 +26,7 @@ function App() {
         <Routes >
           <Route path="/home" element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={loggedIn? <Profile />:<Navigate to="/login" replace />} />
           <Route path="/register" element={<Register />} />
  
         </Routes>

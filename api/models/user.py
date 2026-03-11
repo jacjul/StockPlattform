@@ -15,6 +15,6 @@ class User(Base, TimeStamps):
     name:Mapped[str] = mapped_column(String(40))
     lastname:Mapped[str]= mapped_column(String(40))
     username:Mapped[str] = mapped_column(String(50), unique=True)
-    hashed_password:Mapped[str]= mapped_column(String(120))
-    hashed_refresh_token:Mapped[Optional[str]] = mapped_column(String(140))
+    hashed_password:Mapped[str]= mapped_column()
+    hashed_refresh_token:Mapped[Optional[str]] = mapped_column()
     role:Mapped[Roles]
