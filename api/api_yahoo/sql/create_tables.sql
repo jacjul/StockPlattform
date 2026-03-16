@@ -52,6 +52,7 @@ last_attempt_at TIMESTAMPTZ,
 attempt_count INT DEFAULT 0
 );
 
+
 CREATE INDEX IF NOT EXISTS idx_prices_daily_symbol_ts_desc 
     ON market_data.historical_stockdata_daily(symbol, ts DESC);
 
