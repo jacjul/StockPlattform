@@ -106,7 +106,8 @@ if __name__== "__main__":
     
     # This is all run once in order to get the s&p 500 -> cause thats the symbols we import -> this can be used as a cron-job in order to have a regular update
     create_all_tables_info_financials_basesheet()
+    """
     symbols = get_symbols()
     results = multithreading(symbols)
-    submit_to_company_profile()
+    submit_to_company_profile()"""
 

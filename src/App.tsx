@@ -10,6 +10,7 @@ import type { Theme } from "./components/context/theme-context"
 import {useAuth} from "./components/context/AuthContext.tsx"
 import './App.css'
 import {SymbolProvider} from "./components/context/SymbolContext.tsx"
+import FundamentalLab from "./sites/FundamentalLab.tsx"
 
 function App() {
   const [theme, setTheme] = useState<Theme>("dark")
@@ -29,7 +30,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={isAuthenticated? <Profile />:<Navigate to="/login" replace />} />
           <Route path="/register" element={<Register />} />
- 
+          <Route path="/fundamentalLab" element={isAuthenticated? <FundamentalLab />:<Navigate to="/login" replace />} />
         </Routes>
       </div>
       </SymbolProvider>

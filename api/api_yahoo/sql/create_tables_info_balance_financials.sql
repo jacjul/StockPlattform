@@ -47,3 +47,9 @@ two_hundred_day_average NUMERIC(14,6),
 source_created_at TIMESTAMPTZ,
 loaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_industry ON market_data.company_profile(industry);
+
+CREATE INDEX IF NOT EXISTS idx_symbol_industry on market_data.company_profile(symbol, industry);
+
+CREATE INDEX IF NOT EXISTS idx_symbol_sector on market_data.company_profile(symbol,sector)
