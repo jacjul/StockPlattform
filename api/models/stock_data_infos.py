@@ -13,7 +13,6 @@ class StockDataInfoStaging(Base):
     jsondump : Mapped[Dict[str,str]] = mapped_column(JSONB)
     created_at : Mapped[datetime] = mapped_column(server_default =func.now())
 
-
 class StockDataCompanyProfile(Base):
     __tablename__ = "company_profile"
     __table_args__ = {"schema": "market_data"}
