@@ -11,7 +11,7 @@ type ModalCompanyProps ={
     symbol : string
 }
 
-type CompanyProfile = {
+export type CompanyProfile = {
     symbol?: string
     short_name?: string
     long_name?: string

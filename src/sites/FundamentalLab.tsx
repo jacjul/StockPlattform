@@ -2,8 +2,9 @@ import {useQuery} from "@tanstack/react-query"
 import {useState} from "react"
 import {getAPI} from "../apiCalls"
 import {useAuth} from "../components/context/AuthContext"
+import FundamentalGridComponent from "../components/FundamentalGridComponent"
+import type {CompanyProfile} from "../sites/PortalSymbol"
 
-const label = "semi-bold text-slate-300"
 const container_checkbox = "flex flex-row gap-2"
 const container_search_check = "flex justify-center gap-3"
 type StockInfos = {
@@ -43,11 +44,11 @@ export default function FundamentalLab (){
     }) 
 
     
-    const {data:searchedStocks = []} = useQuery({
+    const {data:searchedStocks = []} = useQuery<CompanyProfile[]>({
     queryKey: ["searchStocks", submittedRequest], 
     enabled: !!submittedRequest,
 
-    queryFn : async()=>{
+    queryFn : async (): Promise<CompanyProfile[]> => {
         if (!submittedRequest) return []
         const params = new URLSearchParams()
         if(submittedRequest.industry) params.set("industry", submittedRequest.industry)
@@ -56,6 +57,7 @@ export default function FundamentalLab (){
         if (submittedRequest.country) params.set("country", submittedRequest.country)
         const url = `/api/stock_data/comparison/${submittedRequest.symbol}?${params.toString()}`
         const response = await getAPI(url, accessToken)
+
         return response.message
     },
     staleTime : 1000*60*60,
@@ -104,7 +106,7 @@ export default function FundamentalLab (){
                     onChange={(e)=> setCurrentSelect(e.target.value.toUpperCase())} placeholder="search a Symbol" 
                 value={currentSelect} />
                 <datalist id="symbol-list">
-                    {symbolsAvailable.map((s:Object)=><option key={s.symbol} value={s.symbol}>{s.symbol} {s.short_name}</option>)}
+                    {symbolsAvailable.map((s: StockInfos)=><option key={s.symbol} value={s.symbol}>{s.symbol} {s.short_name}</option>)}
                 </datalist>
                 <button className="rounded-xl p-1 bg-gray-200">Submit</button>
                 </div>
@@ -145,7 +147,15 @@ export default function FundamentalLab (){
                 </div>
             </form>
             
-            <div className="grid">Found {searchedStocks.length} results</div>
+            {submittedRequest && searchedStocks.length === 0 && (
+                <div>No matching companies found.</div>
+            )}
+
+            <div className="mt-4 grid grid-cols-4 justify-center gap-4">
+                {searchedStocks.map((stock: CompanyProfile, index: number) => (
+                    <FundamentalGridComponent key={stock.symbol ?? `stock-${index}`} stock={stock} />
+                ))}
+            </div>
             
         </div>
     )

@@ -26,6 +26,8 @@ def get_all_symbols(db:Session = Depends(get_db) , user:User =Depends(get_curren
 def get_fundamental_data(symbol:str,
     industry:Optional[str]=Query(None, description="Like Semiconductors"),
     market_cap:Optional[int] =Query(None,ge = 0, description="Market Cap" ),
+    market_cap_min:Optional[int] = Query(None, ge=0, description="Minimum market cap"),
+    market_cap_max:Optional[int] = Query(None, ge=0, description="Maximum market cap"),
     country:Optional[str] =Query(None),
     revenue_growth:Optional[float]=Query(None, description="RevenueGrowth can be positive or negative"),
     gross_margin:Optional[float]=Query(None),
@@ -55,9 +57,13 @@ def get_fundamental_data(symbol:str,
         except Exception as e:
             return f"Couldnt append Industry because of {e}"
         
-    if market_cap: 
+    if market_cap_min is not None or market_cap_max is not None:
+        min_cap = market_cap_min if market_cap_min is not None else 0
+        max_cap = market_cap_max if market_cap_max is not None else (10**18)
+        filters.append(StockDataCompanyProfile.market_cap.between(min_cap,max_cap))
+    elif market_cap:
         min_cap = 0.8 *market_cap
-        max_cap = 1.2 *market_cap 
+        max_cap = 1.2 *market_cap
         filters.append(StockDataCompanyProfile.market_cap.between(min_cap,max_cap))
 
         
@@ -65,10 +71,10 @@ def get_fundamental_data(symbol:str,
        peer = and_(*filters)
        stmt = stmt.where(or_(
            peer , StockDataCompanyProfile.symbol==symbol)).limit(10)
-       results = db.execute(stmt).mappings().all()
+       results = db.execute(stmt).scalars().all()
        return results
     else: 
-        return get_symbol_data
+        return [get_symbol_data] if get_symbol_data else []
 
     
  
