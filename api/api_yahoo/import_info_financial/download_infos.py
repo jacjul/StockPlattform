@@ -85,6 +85,7 @@ def multithreading(symbols, max_workers =10):
 
 ### for submitting information data to company profile table, thats like staging to productive
 
+
 def submit_to_company_profile():
     
     path = Path(__file__).resolve().parent.parent / "sql" /"update_company_profile.sql"
@@ -95,19 +96,18 @@ def submit_to_company_profile():
 
     
 
-
-
-
-
-
-
+def run_download_infos(symbol:str|None = None, create_tables=False):
+    if create_tables:
+        create_all_tables_info_financials_basesheet()
+    if symbol == None:
+        symbols = get_symbols()
+    else: 
+        symbols =symbol
+    results = multithreading(symbols)
+    submit_to_company_profile()
+    return results
 
 if __name__== "__main__":
     
-    # This is all run once in order to get the s&p 500 -> cause thats the symbols we import -> this can be used as a cron-job in order to have a regular update
-    create_all_tables_info_financials_basesheet()
-    """
-    symbols = get_symbols()
-    results = multithreading(symbols)
-    submit_to_company_profile()"""
+    run_download_infos()
 

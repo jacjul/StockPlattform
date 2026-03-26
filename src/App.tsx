@@ -12,6 +12,7 @@ import './App.css'
 import {SymbolProvider} from "./components/context/SymbolContext.tsx"
 import FundamentalLab from "./sites/FundamentalLab.tsx"
 import FundamentalsTutorial from "./sites/FundamentalsTutorial.tsx"
+import UpdateDB from "./sites/UpdateDB.tsx"
 function App() {
   const [theme, setTheme] = useState<Theme>("dark")
   const {isAuthenticated} = useAuth()
@@ -32,7 +33,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/fundamentalLab" element={isAuthenticated? <FundamentalLab />:<Navigate to="/login" replace />} />
           <Route path="/fundamentalTutorial" element={isAuthenticated? <FundamentalsTutorial />:<Navigate to="/login" replace />} />
-
+          <Route  path="updateDB" element={isAuthenticated? <UpdateDB />:<Navigate to="/login" replace />}/>
         </Routes>
       </div>
       </SymbolProvider>
