@@ -1,4 +1,4 @@
-import {useQuery} from "@tanstack/react-query"
+import {useQuery, useQueryClient} from "@tanstack/react-query"
 import {useState} from "react"
 import {getAPI} from "../apiCalls"
 import {useAuth} from "../components/context/AuthContext"
@@ -28,6 +28,7 @@ type SubmittedRequest = {
 }
 type FilterKey = "industry" | "marketCap" | "country"
 export default function FundamentalLab (){
+    const queryClient = useQueryClient()
     const [currentSelect,setCurrentSelect] =useState("")
     const [filters, setFilters] =useState<Set<FilterKey>>(new Set())
     const [submittedRequest, setSubmittedRequest] =useState<SubmittedRequest | null>(null)
@@ -37,7 +38,6 @@ export default function FundamentalLab (){
         queryKey: ["symbolsAvailable"],
         queryFn : async ():Promise<StockInfos[]>=>{
             const response = await getAPI("/api/stock_data/comparison", accessToken)
-            console.log(response.message)
             return response.message
         },
         staleTime: 1000*60*60
@@ -90,6 +90,13 @@ export default function FundamentalLab (){
 
     setSubmittedRequest(next)
 }
+
+    function handleDeleteStock(symbol: string) {
+        if (!submittedRequest) return
+        queryClient.setQueryData<CompanyProfile[]>(["searchStocks", submittedRequest], (old = []) =>
+            old.filter((stock) => stock.symbol !== symbol)
+        )
+    }
 
 
 
@@ -151,11 +158,7 @@ export default function FundamentalLab (){
                 <div>No matching companies found.</div>
             )}
 
-            <div className="mt-4 grid grid-cols-4 justify-center gap-4">
-                {searchedStocks.map((stock: CompanyProfile, index: number) => (
-                    <FundamentalGridComponent key={stock.symbol ?? `stock-${index}`} stock={stock} />
-                ))}
-            </div>
+            <FundamentalGridComponent stocks={searchedStocks} onDeleteStock={handleDeleteStock} />
             
         </div>
     )
