@@ -16,7 +16,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 symbols = ["AAPL", "TSLA"]
 
 #created the connected tables from sql-folder
-def create_all_tables_info_financials_basesheet():
+def create_all_tables_info():
     path = Path(__file__).resolve().parent.parent / "sql" / "create_tables_info_balance_financials.sql"
     sql_stmt = path.read_text(encoding = "utf-8")
 
@@ -98,11 +98,9 @@ def submit_to_company_profile():
 
 def run_download_infos(symbol:str|None = None, create_tables=False):
     if create_tables:
-        create_all_tables_info_financials_basesheet()
-    if symbol == None:
-        symbols = get_symbols()
-    else: 
-        symbols =symbol
+        create_all_tables_info()
+
+    symbols = get_symbols() if symbol == None else [symbol]
     results = multithreading(symbols)
     submit_to_company_profile()
     return results

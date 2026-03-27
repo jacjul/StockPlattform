@@ -1,13 +1,30 @@
-import React from 'react'
+import React, {useState} from 'react'
 import {useMutation } from "@tanstack/react-query"
 import {postAPI} from "../apiCalls"
+import {useAuth} from "../components/context/AuthContext"
 
+type UpdateVars ={
+    endpointQ :string
+    dateBody: {
+        start : string
+        end : string
+    }
+}
 const UpdateDB = () => {
+    const today = new Date()
+    const sevenDaysAgo = new Date(today)
+    sevenDaysAgo.setDate(today.getDate() - 7)
+
+    const {accessToken} = useAuth()
+    const [hasCheckedBox, setHasCheckedBox] = useState<boolean>(false) 
+    const [startDate, setStartDate] = useState(sevenDaysAgo.toISOString().substring(0,10))
+    const [endDate, setEndDate] = useState(today.toISOString().substring(0,10))
+
 
     const updateMutation = useMutation({
-        mutationFn: async (symbol?: string)=>{
-            const endpoint = symbol ? `/api/update_all/${symbol}` : "/api/update_all"
-            return postAPI(endpoint)
+        mutationFn: async ({endpointQ, dateBody}:UpdateVars)=>{
+            const response = await postAPI(endpointQ, accessToken, dateBody)
+            return response.message
         }
     })
 
@@ -15,9 +32,32 @@ const UpdateDB = () => {
         event.preventDefault()
         const fd = new FormData(event.currentTarget)
         const symbol = String(fd.get("symbol") ?? "").trim().toUpperCase()
+        const checks = fd.getAll("check")
+        
+        const dateStart = fd.get("start")
+        const dateEnd = fd.get("end")
 
-        updateMutation.mutate(symbol || undefined)
+        const dateBody = {start: dateStart,end : dateEnd}
 
+
+        const searchParams = new URLSearchParams()
+        checks.forEach(check =>{searchParams.set(check, "True")})
+
+
+
+        const endpoint = symbol ? `/api/update_all/${symbol}` : "/api/update_all"
+        const endpointQ = searchParams ? endpoint +"?"+ searchParams.toString() : endpoint 
+
+        updateMutation.mutate({endpointQ,dateBody})
+
+    }
+
+    function handleCheckboxChange(event:React.ChangeEvent<HTMLInputElement>){
+        const form = event.currentTarget.form
+
+        if (!form) return
+        const checkedBoxes = form.querySelectorAll('input[name="check"]:checked').length
+        setHasCheckedBox(checkedBoxes>0)
     }
   return (
     <div className="full-w h-screen flex flex-col justify-center items-center ">
@@ -27,11 +67,40 @@ const UpdateDB = () => {
          Daily OHLC, Company Profiles, Financials,Balance Sheet and Cash Flow
     </h4>
     
-    <h5>If a symbol is not selected all symbols will be updated - that will take around 15min</h5>
-    <form onSubmit={handleSubmit} className="flex flex-row items-center gap-4">
-        <label htmlFor="symbol">Add Label for DB-Download</label>
-        <input type="text" name="symbol" placeholder="e.g AAPL"/>
-        <button className="bg-gray-600 rounded-2xl p-1">Submit</button>
+    <h5>If a symbol is not selected all symbols will be updated - that will take more then 20min</h5>
+    <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
+        <div>
+            <label htmlFor="symbol">Add Symbol for DB-Download</label>
+            <input type="text" name="symbol" placeholder="e.g AAPL"/>
+        </div>
+        <div className="flex flex-row gap-2 p-1">
+            <label htmlFor="start">Start time</label>
+            <input type ="date" name="start" id="start" value={startDate} onChange={(e) => setStartDate(e.target.value)} max={endDate}/>
+            <label htmlFor="end">End time</label>
+            <input type ="date" name="end" id="end" value={endDate} onChange={(e)=>setEndDate(e.target.value)} min={startDate}/>
+        </div>
+        <div className="flex flex-row gap-5">
+            <div className="flex flex-row gap-2"> 
+            <label htmlFor="daily">Daily Updates</label>
+            <input type="checkbox" id="daily" name="check" value="daily" onChange={handleCheckboxChange}/>
+            </div>
+            <div className=" flex flex-row gap-2">
+            <label htmlFor="infos">Infos</label>
+            <input type="checkbox" id="infos" name="check" value="infos" onChange={handleCheckboxChange}/>
+            </div>
+            <div className="flex flex-row gap-2">
+            <label htmlFor="financials">Financials</label>
+            <input type="checkbox" id="financials" name="check" value="financials" onChange={handleCheckboxChange}/>
+            </div>     
+        </div>
+
+        
+                <button
+                    className="bg-gray-600 disabled:bg-gray-500 rounded-2xl p-1"
+                    disabled={!hasCheckedBox || updateMutation.isPending}
+                >
+                    {updateMutation.isPending ? "Updating..." : "Submit"}
+                </button>
     </form>
     </div>
     </div>

@@ -72,10 +72,10 @@ def get_staging_data(chunk_symbols:list[str]):
 def running_workers(symbol:str|None=None,max_workers = 10 ):
     if symbol == None:
         symbols = get_symbols()
-        chunks_symbols = create_chunks(symbols, max_workers)
-
     else:
-        chunks_symbols = create_chunks(symbol, max_workers)
+        symbols = [symbol]
+    
+    chunks_symbols = create_chunks(symbol, max_workers)
 
     if not chunks_symbols:
         return []
@@ -98,6 +98,7 @@ def run_download_financial_balance_cash(symbol:str|None=None, create_tables=Fals
     if create_tables:
         create_all_databases()
         Base.metadata.create_all(bind = engine)
+    
     running_workers(symbol)
     update_productive_tables()
 

@@ -66,12 +66,31 @@ def get_all_stocks(db:Session =Depends(get_db)):
     result_df =result_df.replace({pd.NaT:None})
     
     wide = result_df.pivot_table(index="symbol", columns="period", values="close",aggfunc="first").reset_index()
-    
-    wide["pct_week"] = ((wide["day"]-wide["week"])/wide["week"])*100
-    wide["pct_month"] = ((wide["day"]-wide["month"])/wide["month"])*100
-    wide["week_indicator"] = wide["pct_week"].apply(lambda x : "up_much" if x>=5 else ("up" if x>=0 else("down_much" if x<= -5 else "down")))
-    wide["month_indicator"] =wide["pct_month"].apply(lambda x : "up_much" if x>=5 else ("up" if x>=0 else("down_much" if x<= -5 else "down")))
 
+    for col in ["day", "week", "month"]:
+        if col not in wide.columns:
+            wide[col] = np.nan
+
+    wide["pct_week"] = ((wide["day"] - wide["week"]) / wide["week"]) * 100
+    wide["pct_month"] = ((wide["day"] - wide["month"]) / wide["month"]) * 100
+
+    def trend_indicator(value: float | None):
+        if pd.isna(value):
+            return None
+        if value >= 5:
+            return "up_much"
+        if value >= 0:
+            return "up"
+        if value <= -5:
+            return "down_much"
+        return "down"
+
+    wide["week_indicator"] = wide["pct_week"].apply(trend_indicator)
+    wide["month_indicator"] = wide["pct_month"].apply(trend_indicator)
+
+    # FastAPI's JSON serializer rejects NaN/inf, so coerce them to None.
+    wide = wide.replace([np.inf, -np.inf], np.nan)
+    wide = wide.astype(object).replace({np.nan: None})
 
     records = wide.to_dict(orient = "records")
 
