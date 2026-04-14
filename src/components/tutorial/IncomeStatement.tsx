@@ -1,5 +1,7 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type {Dispatch, SetStateAction} from "react"
+import {useQuery} from "@tanstack/react-query"
+import {getAPI} from "../../apiCalls"
 type LessonStep = {
   id: string
   term: string
@@ -8,9 +10,75 @@ type LessonStep = {
   example?: string
 }
 
-const IncomeStatement = ({setStepFundamental}:{setStepFundamental:Dispatch<SetStateAction<number>>}) => {
+type CompanyProfile = {
+  symbol: string
+  short_name: string | null
+}
+
+type IncomeStatementYearRow = {
+  year: number
+  total_revenue: number | null
+  cost_of_revenue: number | null
+  gross_profit: number | null
+  operating_expense: number | null
+  selling_general_and_administration: number | null
+  research_and_development: number | null
+  operating_income: number | null
+  net_interest_income: number | null
+  other_income_expense: number | null
+  pretax_income: number | null
+  tax_provision: number | null
+  net_income: number | null
+}
+
+type IncomeStatementProps = {
+  setStepFundamental:Dispatch<SetStateAction<number>>
+  selectedCompany: string
+  setSelectedCompany: Dispatch<SetStateAction<string>>
+}
+
+const IncomeStatement = ({setStepFundamental,selectedCompany,setSelectedCompany }:IncomeStatementProps) => {
   const [currentStep, setCurrentStep] = useState<number>(0)
 const [isClickedBalanceSheet, setIsClickedBalanceSheet] = useState<boolean>(false)
+
+const {data:allSymbols, isPending, error} = useQuery({
+  queryKey : ["allSymbols"],
+  queryFn : async()=>{
+              const response = await getAPI("/api/tutorial/getSymbols")
+              return response.message
+  }
+})
+
+const {data:incomeStatement, isPending:isPendingIncome,error:errorIncome} = useQuery({
+    queryKey: ["incomeStatement", selectedCompany],
+    queryFn : async()=>{
+      const response = await getAPI(`/api/tutorial/${selectedCompany}`)
+      return response.message
+    },
+    enabled: !!selectedCompany && selectedCompany.length > 0 
+})
+
+const companies: CompanyProfile[] = Array.isArray(allSymbols) ? allSymbols : []
+const incomeRows: IncomeStatementYearRow[] = Array.isArray(incomeStatement) ? incomeStatement : []
+const activeCompany = selectedCompany || companies[0]?.symbol || "Mercado Libre"
+
+useEffect(() => {
+  if (!selectedCompany && companies.length > 0) {
+    setSelectedCompany(companies[0].symbol)
+  }
+}, [companies, selectedCompany])
+
+const billion = 1_000_000_000
+const yearToRow = new Map(incomeRows.map((row) => [row.year, row]))
+const formatBillions = (value?: number | null) => {
+  if (value === null || value === undefined) return "-"
+  return (Number(value) / billion).toFixed(1)
+}
+const valueFor = (year: number, key: keyof IncomeStatementYearRow) => {
+  const row = yearToRow.get(year)
+  if (!row) return "-"
+  return formatBillions(row[key] as number | null | undefined)
+}
   const steps: LessonStep[] = [
     {
       id: "revenue",
@@ -113,8 +181,8 @@ const [isClickedBalanceSheet, setIsClickedBalanceSheet] = useState<boolean>(fals
     "[&>td]:px-4",
     "[&>td]:py-2",
     "[&>td]:text-sm",
+    "[&>td]:!text-black",
     "[&>td:first-child]:pl-8",
-    "[&>td:first-child]:text-slate-600",
     "[&>td:not(:first-child)]:text-right",
     "[&>td]:bg-slate-50"
   ].join(" ")
@@ -128,7 +196,31 @@ const [isClickedBalanceSheet, setIsClickedBalanceSheet] = useState<boolean>(fals
     <section className="w-full max-w-6xl mx-auto px-4 py-8 md:px-6">
       <div className="mb-6">
         <h2 className="text-3xl font-semibold tracking-tight text-slate-900">Income Statement Tutorial</h2>
-        <p className="mt-2 text-sm text-slate-600">Mercado Libre annual data (2023-2025), values in USD billions.</p>
+        <p className="mt-2 text-sm text-slate-600">{activeCompany} annual data (2023-2025), values in USD billions.</p>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <label htmlFor="company-select" className="block text-sm font-semibold text-slate-900">
+          Choose a company to analyze
+        </label>
+        <p className="mt-1 text-sm text-slate-600">
+          Select the company you want to analyze. Symbols are loaded from allSymbols.
+        </p>
+        <select
+          id="company-select"
+          value={selectedCompany || companies[0]?.symbol || ""}
+          onChange={(event) => setSelectedCompany(event.target.value)}
+          disabled={isPending || companies.length === 0}
+          className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:bg-slate-100"
+        >
+          {companies.map((company) => (
+            <option key={company.symbol} value={company.symbol}>
+              {company.symbol} {company.short_name ? `- ${company.short_name}` : ""}
+            </option>
+          ))}
+        </select>
+        {isPending && <p className="mt-2 text-xs text-slate-500">Loading company symbols...</p>}
+        {error && <p className="mt-2 text-xs text-rose-700">Could not load symbols.</p>}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
@@ -146,107 +238,103 @@ const [isClickedBalanceSheet, setIsClickedBalanceSheet] = useState<boolean>(fals
               <tbody>
                 <tr className={getMainRowClass("revenue")}>
                   <td>Revenue</td>
-                  <td>15.1</td>
-                  <td>20.8</td>
-                  <td>28.9</td>
+                  <td>{valueFor(2023, "total_revenue")}</td>
+                  <td>{valueFor(2024, "total_revenue")}</td>
+                  <td>{valueFor(2025, "total_revenue")}</td>
                 </tr>
 
                 <tr className={getMainRowClass("COGS")}>
                   <td>Cost of Goods Sold (COGS)</td>
-                  <td>7.5</td>
-                  <td>11.2</td>
-                  <td>16.0</td>
+                  <td>{valueFor(2023, "cost_of_revenue")}</td>
+                  <td>{valueFor(2024, "cost_of_revenue")}</td>
+                  <td>{valueFor(2025, "cost_of_revenue")}</td>
                 </tr>
                 {activeId === "COGS" && (
                   <>
                     <tr className={detailRowClass}>
-                      <td>Raw Materials</td>
-                      <td>4.3</td>
-                      <td>6.4</td>
-                      <td>9.1</td>
+                      <td>SG&amp;A</td>
+                      <td>{valueFor(2023, "selling_general_and_administration")}</td>
+                      <td>{valueFor(2024, "selling_general_and_administration")}</td>
+                      <td>{valueFor(2025, "selling_general_and_administration")}</td>
                     </tr>
                     <tr className={detailRowClass}>
-                      <td>Direct Labor</td>
-                      <td>2.3</td>
-                      <td>3.4</td>
-                      <td>4.8</td>
-                    </tr>
-                    <tr className={detailRowClass}>
-                      <td>Freight and Packaging</td>
-                      <td>1.0</td>
-                      <td>1.5</td>
-                      <td>2.1</td>
+                      <td>R&amp;D</td>
+                      <td>{valueFor(2023, "research_and_development")}</td>
+                      <td>{valueFor(2024, "research_and_development")}</td>
+                      <td>{valueFor(2025, "research_and_development")}</td>
                     </tr>
                   </>
                 )}
 
                 <tr className={getMainRowClass("grossProfit", true)}>
                   <td>Gross Profit</td>
-                  <td>7.6</td>
-                  <td>9.6</td>
-                  <td>12.9</td>
+                  <td>{valueFor(2023, "gross_profit")}</td>
+                  <td>{valueFor(2024, "gross_profit")}</td>
+                  <td>{valueFor(2025, "gross_profit")}</td>
                 </tr>
                 <tr className={getMainRowClass("operatingExpenses")}>
                   <td>Operating Expenses</td>
-                  <td>5.4</td>
-                  <td>6.9</td>
-                  <td>9.7</td>
+                  <td>{valueFor(2023, "operating_expense")}</td>
+                  <td>{valueFor(2024, "operating_expense")}</td>
+                  <td>{valueFor(2025, "operating_expense")}</td>
                 </tr>
                 {activeId === "operatingExpenses" && (
                   <>
                     <tr className={detailRowClass}>
                       <td>SG&amp;A (Proxy)</td>
-                      <td>3.6</td>
-                      <td>5.0</td>
-                      <td>7.4</td>
+                      <td>{valueFor(2023, "selling_general_and_administration")}</td>
+                      <td>{valueFor(2024, "selling_general_and_administration")}</td>
+                      <td>{valueFor(2025, "selling_general_and_administration")}</td>
                     </tr>
                     <tr className={detailRowClass}>
                       <td>R&amp;D</td>
-                      <td>1.8</td>
-                      <td>1.9</td>
-                      <td>2.3</td>
+                      <td>{valueFor(2023, "research_and_development")}</td>
+                      <td>{valueFor(2024, "research_and_development")}</td>
+                      <td>{valueFor(2025, "research_and_development")}</td>
                     </tr>
                   </>
                 )}
 
                 <tr className={getMainRowClass("operatingIncome", true)}>
                   <td>Operating Income</td>
-                  <td>2.2</td>
-                  <td>2.6</td>
-                  <td>3.2</td>
+                  <td>{valueFor(2023, "operating_income")}</td>
+                  <td>{valueFor(2024, "operating_income")}</td>
+                  <td>{valueFor(2025, "operating_income")}</td>
                 </tr>
                 <tr className={getMainRowClass("interest")}>
-                  <td>Interest</td>
-                  <td>0.0</td>
-                  <td>0.0</td>
-                  <td>0.0</td>
+                  <td>Net Interest Income</td>
+                  <td>{valueFor(2023, "net_interest_income")}</td>
+                  <td>{valueFor(2024, "net_interest_income")}</td>
+                  <td>{valueFor(2025, "net_interest_income")}</td>
                 </tr>
                 <tr className={getMainRowClass("totalNonOperatingIncomeExpense")}>
                   <td>Total Non-Operating Income/Expense</td>
-                  <td>-0.7</td>
-                  <td>-0.2</td>
-                  <td>-0.4</td>
+                  <td>{valueFor(2023, "other_income_expense")}</td>
+                  <td>{valueFor(2024, "other_income_expense")}</td>
+                  <td>{valueFor(2025, "other_income_expense")}</td>
                 </tr>
                 <tr className={getMainRowClass("pretaxIncome", true)}>
                   <td>Pretax Income</td>
-                  <td>1.6</td>
-                  <td>2.4</td>
-                  <td>2.8</td>
+                  <td>{valueFor(2023, "pretax_income")}</td>
+                  <td>{valueFor(2024, "pretax_income")}</td>
+                  <td>{valueFor(2025, "pretax_income")}</td>
                 </tr>
                 <tr className={getMainRowClass("incomeTax")}>
                   <td>Income Tax</td>
-                  <td>0.6</td>
-                  <td>0.5</td>
-                  <td>0.8</td>
+                  <td>{valueFor(2023, "tax_provision")}</td>
+                  <td>{valueFor(2024, "tax_provision")}</td>
+                  <td>{valueFor(2025, "tax_provision")}</td>
                 </tr>
                 <tr className={getMainRowClass("netIncome", true)}>
                   <td>Net Income</td>
-                  <td>1.0</td>
-                  <td>1.9</td>
-                  <td>2.0</td>
+                  <td>{valueFor(2023, "net_income")}</td>
+                  <td>{valueFor(2024, "net_income")}</td>
+                  <td>{valueFor(2025, "net_income")}</td>
                 </tr>
               </tbody>
             </table>
+            {isPendingIncome && <p className="mt-3 text-xs text-slate-500">Loading income statement...</p>}
+            {errorIncome && <p className="mt-3 text-xs text-rose-700">Could not load income statement for this symbol.</p>}
           </div>
         </div>
 
